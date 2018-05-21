@@ -2,6 +2,7 @@ package com.ecommerce.microcommerce.web.controller;
 
 import com.ecommerce.microcommerce.dao.ProductDao;
 import com.ecommerce.microcommerce.model.Product;
+import com.ecommerce.microcommerce.web.exceptions.ProduitGratuitException;
 import com.ecommerce.microcommerce.web.exceptions.ProduitIntrouvableException;
 import com.fasterxml.jackson.databind.ser.FilterProvider;
 import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
@@ -16,6 +17,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import javax.validation.Valid;
 import java.net.URI;
+import java.util.HashMap;
 import java.util.List;
 
 
@@ -69,6 +71,10 @@ public class ProductController {
 
     public ResponseEntity<Void> ajouterProduit(@Valid @RequestBody Product product) {
 
+        if (product.getPrix() == 0){
+            int id = product.getId();
+            throw new ProduitGratuitException("Le produit avec l'id " + id + " ne doit pas être gratuit! changez le prix svp.");
+        }
         Product productAdded =  productDao.save(product);
 
         if (productAdded == null)
@@ -85,8 +91,7 @@ public class ProductController {
 
     @DeleteMapping (value = "/Produits/{id}")
     public void supprimerProduit(@PathVariable int id) {
-
-        productDao.delete(id);
+        productDao.deleteById(id);
     }
 
     @PutMapping (value = "/Produits")
@@ -104,5 +109,25 @@ public class ProductController {
     }
 
 
+    @ApiOperation(value = "calcule la marge de chaque produit")
+    @GetMapping(value = "/AdminProduits")
+    public HashMap<Product, Integer> calculerMargeProduit() {
 
+        List<Product> produits = productDao.findAll();
+        HashMap<Product,Integer> result = new HashMap<>();
+        int diff ;
+        for(Product produit : produits ){
+            diff = produit.getPrix() - produit.getPrixAchat();
+            result.put(produit,diff);
+        }
+        return result;
+    }
+
+    @ApiOperation(value = "retourne la liste des produits trié")
+    @GetMapping(value = "/ProduitsOrdered")
+    public List<Product> trierProduitsParOrdreAlphabetique() {
+
+        List<Product> produits = productDao.findAllByOrderByNomAsc();
+        return produits;
+    }
 }
